@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <title>Запуск по кнопке</title>
+</head>
+<body>
+
+<button id="toggleBtn">Запустить мониторинг</button>
+
+<script src="Channel.js"></script>
+<script>
+    async function checkFunc() {
+        await new Promise((res) => setTimeout(res, 100));
+        return Math.random() > 0.3;
+    }
+
+    const toggleBtn = document.getElementById('toggleBtn');
+
+    let monitoringActive = false;
+    let manager = null;
+
+    toggleBtn.addEventListener('click', () => {
+        if (!monitoringActive) {
+            // Запускаем
+            (async () => {
+                const channels = [
+                    new Channel('API1', checkFunc),
+                    new Channel('API2', checkFunc),
+                    new Channel('WebSocket', checkFunc),
+                ];
+
+                manager = new ConnectionManager(channels);
+
+                manager.addEventListener(async (event) => {
+                    console.log(
+                        `Состояние канала ${event.channelId} изменено с ${event.oldState} на ${event.newState}`
+                    );
+                });
+
+                manager.startMonitoring();
+
+                monitoringActive = true;
+                toggleBtn.textContent = 'Остановить мониторинг';
+
+                while (monitoringActive) {
+                    const data = await manager.getData();
+                    if (data) console.log('Получены данные:', data);
+                    await new Promise((res) => setTimeout(res,2000));
+                }
+            })();
+        } else {
+
+            if (manager) {
+                manager.stopMonitoring();
+            }
+            monitoringActive = false;
+            toggleBtn.textContent = 'Запустить мониторинг';
+        }
+    });
+</script>
+
+</body>
+</html>
